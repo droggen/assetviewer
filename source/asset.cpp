@@ -16,8 +16,8 @@ ASSETS assets_load_dir(QString directory)
 
     //QDir dir(directory);
 
-    //QDir dir("d:\\wearlab\\admin\\finance\\assetdata");
-    QDir dir("D:\\wearlab\\admin\\finance\\assettest");
+    QDir dir("d:\\wearlab\\admin\\finance\\assetdata");
+    //QDir dir("D:\\wearlab\\admin\\finance\\assettest");
 
     dprintf("Num entries: %d\n",dir.count());
 
@@ -69,6 +69,8 @@ ASSET asset_load(QFileInfo fi)
     file.close();
     //dprintf("name: %s\n",sedolname.toStdString().c_str());
 
+
+
     asset.sedol = sedol;
     asset.name = sedolname;
 
@@ -117,6 +119,21 @@ ASSET asset_load(QFileInfo fi)
 
     }
     file2.close();
+
+    // Load the total value
+    QString fn3 = pth+"/"+sedol+".val";
+    QFile file3(fn3);
+    if(!file3.open(QIODevice::ReadOnly))
+    {
+        dprintf("Error, cannot open %s\n",fn3.toStdString().c_str());
+        return asset;
+    }
+    QTextStream in3(&file3);
+    QString value = in3.readLine();
+    file3.close();
+    dprintf("val: %s\n",value.toStdString().c_str());
+
+    asset.value = value.toDouble();
 
     asset.ok = true;
     return asset;
@@ -178,6 +195,26 @@ ASSETS assets_sort_sedol(ASSETS assets)
     {
         i.next();
         //dprintf("key: %s val: %d\n",i.key().toStdString().c_str(),i.value());
+        newassets.push_back(assets[i.value()]);
+    }
+    return newassets;
+}
+ASSETS assets_sort_value(ASSETS assets)
+{
+    ASSETS newassets;
+
+    // Use a map with value as key - maps always sorted by key
+    // (must use multimap)
+    QMap<double,int> map;
+    // Populate
+    for(unsigned i=0;i<assets.size();i++)
+        map.insertMulti(assets[i].value,i);
+    QMapIterator<double, int> i(map);
+    i.toBack();
+    while(i.hasPrevious())
+    {
+        i.previous();
+        //dprintf("key: %lf val: %d\n",i.key(),i.value());
         newassets.push_back(assets[i.value()]);
     }
     return newassets;

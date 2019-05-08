@@ -120,12 +120,17 @@ void MainWindow::onHeaderSectionClicked(int h)
     if(h==0)
     {
         // Sort by SEDOL
-        assets = assets_sort_sedol(assets);
+        assets = assets_sort_sedol(assets_org);
+    }
+    if(h==1)
+    {
+        // Sort by Value
+        assets = assets_sort_value(assets_org);
     }
     if(h==2)
     {
         // Sort by Name
-        assets = assets_sort_name(assets);
+        assets = assets_sort_name(assets_org);
     }
 
     fillAssetsTable();
@@ -143,7 +148,7 @@ void MainWindow::fillAssetsTable()
         ui->twAssets->setItem(i, 0, newItem);
         newItem = new QTableWidgetItem(assets[i].name);
         ui->twAssets->setItem(i, 2, newItem);
-        newItem = new QTableWidgetItem("N/A");
+        newItem = new QTableWidgetItem(QString("%1").arg(assets[i].value));
         ui->twAssets->setItem(i, 1, newItem);
     }
     ui->twAssets->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
