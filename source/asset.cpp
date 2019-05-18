@@ -110,7 +110,7 @@ ASSET asset_load(QFileInfo fi)
             dprintf("conv toint error\n");
             return asset;
         }*/
-        double val = splt.at(1).toDouble();
+        double val = splt.at(1).toDouble();        
         //dprintf("%u %lf\n",date,val);
 
         as.date = date;
@@ -120,7 +120,7 @@ ASSET asset_load(QFileInfo fi)
     }
     file2.close();
 
-    // Load the total value
+    // Load the book value
     QString fn3 = pth+"/"+sedol+".val";
     QFile file3(fn3);
     if(!file3.open(QIODevice::ReadOnly))
@@ -133,7 +133,30 @@ ASSET asset_load(QFileInfo fi)
     file3.close();
     dprintf("val: %s\n",value.toStdString().c_str());
 
-    asset.value = value.toDouble();
+    asset.bookvalue = value.toDouble();
+
+    // Load the amount of units
+    QString fn4 = pth+"/"+sedol+".unt";
+    QFile file4(fn4);
+    if(!file4.open(QIODevice::ReadOnly))
+    {
+        dprintf("Error, cannot open %s\n",fn4.toStdString().c_str());
+        return asset;
+    }
+    QTextStream in4(&file4);
+    value = in4.readLine();
+    file4.close();
+    dprintf("units : %s\n",value.toStdString().c_str());
+
+    asset.units = value.toDouble();
+
+    // Calculate most recent value
+    asset.curvalue = asset.units*asset.data.back().v;
+    // Calculate the gain (loss)
+    asset.gain = (asset.curvalue-asset.bookvalue)/asset.bookvalue;
+
+
+
 
     asset.ok = true;
     return asset;
@@ -208,7 +231,7 @@ ASSETS assets_sort_value(ASSETS assets)
     QMap<double,int> map;
     // Populate
     for(unsigned i=0;i<assets.size();i++)
-        map.insertMulti(assets[i].value,i);
+        map.insertMulti(assets[i].bookvalue,i);
     QMapIterator<double, int> i(map);
     i.toBack();
     while(i.hasPrevious())
@@ -219,7 +242,46 @@ ASSETS assets_sort_value(ASSETS assets)
     }
     return newassets;
 }
+ASSETS assets_sort_curvalue(ASSETS assets)
+{
+    ASSETS newassets;
 
+    // Use a map with value as key - maps always sorted by key
+    // (must use multimap)
+    QMap<double,int> map;
+    // Populate
+    for(unsigned i=0;i<assets.size();i++)
+        map.insertMulti(assets[i].curvalue,i);
+    QMapIterator<double, int> i(map);
+    i.toBack();
+    while(i.hasPrevious())
+    {
+        i.previous();
+        //dprintf("key: %lf val: %d\n",i.key(),i.value());
+        newassets.push_back(assets[i.value()]);
+    }
+    return newassets;
+}
+ASSETS assets_sort_gain(ASSETS assets)
+{
+    ASSETS newassets;
+
+    // Use a map with value as key - maps always sorted by key
+    // (must use multimap)
+    QMap<double,int> map;
+    // Populate
+    for(unsigned i=0;i<assets.size();i++)
+        map.insertMulti(assets[i].gain,i);
+    QMapIterator<double, int> i(map);
+    i.toBack();
+    while(i.hasPrevious())
+    {
+        i.previous();
+        //dprintf("key: %lf val: %d\n",i.key(),i.value());
+        newassets.push_back(assets[i.value()]);
+    }
+    return newassets;
+}
 /*
  * Return subset of data starting at date
 */
@@ -253,3 +315,13 @@ ASSETS assets_after(ASSETS assets,unsigned date)
 }
 
 
+int assets_find_id_by_sedol(ASSETS assets,QString sedol)
+{
+    return 0;
+}
+
+// Express gain in % with 3 digits
+double gain_rnd(double gain)
+{
+    return round(gain*100000.0)/1000.0;
+}

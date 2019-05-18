@@ -20,7 +20,9 @@ typedef struct
 {
     QString name;
     QString sedol;
-    double value;
+    double bookvalue,curvalue;
+    double units;
+    double gain;
     bool ok;
     std::vector<ASSETSAMPLE> data;
 } ASSET;
@@ -34,6 +36,9 @@ void assets_print_basic(ASSETS assets);
 ASSETS assets_sort_name(ASSETS assets);
 ASSETS assets_sort_sedol(ASSETS assets);
 ASSETS assets_sort_value(ASSETS assets);
+ASSETS assets_sort_curvalue(ASSETS assets);
+ASSETS assets_sort_gain(ASSETS assets);
 ASSETS assets_after(ASSETS assets,unsigned date);
+double gain_rnd(double gain);
 
 #endif // ASSET_H
