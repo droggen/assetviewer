@@ -2,6 +2,14 @@
  QTChars in designer: https://stackoverflow.com/questions/48362864/how-to-insert-qchartview-in-form-with-qt-designer
 
 */
+/*
+ * TODO:
+ * v Hovering over sum gives name of 1st sedol instead of nothing or sum
+ * v Pie chart: by book value or current value
+ * - Keyboard shortcut for load
+ * - Keyboard shortcut for quit
+ */
+
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -47,8 +55,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     resize(QDesktopWidget().availableGeometry(this).size() * 0.7);
 
+
+
+
+
     // Finish the tableWidget setup
-    QStringList hdr ={"SEDOL","Book value","Units","Cur value", "%",    "Name"};
+    QStringList hdr ={"SEDOL","Book value","Units","Cur value", "%", "Name"};
     ui->twAssets->setColumnCount(6);
     ui->twAssets->setHorizontalHeaderLabels(hdr);
     QHeaderView *header = ui->twAssets->horizontalHeader();
@@ -57,18 +69,20 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     // Setting up chart
-    chartxrange=0;
+    chartxrange=chartxrange_all;
     chartyrangepercent=false;
+    chartsort=chartsort_sedol;
+    chartformat=chartformat_unitprice;
+    piechartformat=piechartformat_bookval;
+    reinitui();
     connect(ui->graphicsView,SIGNAL(mouseMoveSignal(qreal,qreal)),this,SLOT(on_chartMouseMoveSignal(qreal,qreal)));
     ui->graphicsView->setRubberBand(QChartView::HorizontalRubberBand);
 
-    // Play with pie chart
-    //test();
 
     pieseries = new QPieSeries();
     piechart = new QChart();
     piechart->addSeries(pieseries);
-    piechart->setTitle("Simple piechart example");
+    piechart->setTitle("Asset allocation");
     piechart->legend()->hide();
     ui->graphicsView_2->setChart(piechart);
     ui->graphicsView_2->setRenderHint(QPainter::Antialiasing);
@@ -133,37 +147,38 @@ void MainWindow::onHeaderSectionClicked(int h)
     if(h==headeridx_sedol)
     {
         // Sort by SEDOL
-        assets = assets_sort_sedol(assets_org);
+        chartsort=chartsort_sedol;
     }
     if(h==headeridx_bookval)
     {
         // Sort by Value
-        assets = assets_sort_value(assets_org);
+        chartsort=chartsort_bookval;
     }
     if(h==headeridx_name)
     {
         // Sort by Name
-        assets = assets_sort_name(assets_org);
+        chartsort=chartsort_name;
     }
     if(h==headeridx_curval)
     {
-        // Sort by Name
-        assets = assets_sort_curvalue(assets_org);
+        // Sort by current value
+        chartsort=chartsort_curval;
     }
     if(h==headeridx_gain)
     {
-        // Sort by Name
-        assets = assets_sort_gain(assets_org);
+        // Sort by gain
+        chartsort=chartsort_gain;
     }
-
+    updateassetspresentation();
     fillAssetsTable();
 }
 void MainWindow::fillAssetsTable()
 {
     // Add assets to TabelWidget
     ui->twAssets->clearContents();
-    ui->twAssets->setRowCount(assets.size());
-    for(unsigned i=0;i<assets.size();i++)
+    // Skip last item which is sum asset
+    ui->twAssets->setRowCount(assets.size()-1);
+    for(unsigned i=0;i<assets.size()-1;i++)
     {
         QTableWidgetItem *newItem;
         newItem = new QTableWidgetItem(assets[i].sedol);
@@ -188,61 +203,21 @@ void MainWindow::fillAssetsTable()
 }
 void MainWindow::fillPieChart()
 {
-    // QPieSeries must get sorted data by value
-    ASSETS tmpassets = assets_sort_value(assets_org);
-
-    /*QPieSeries *series = new QPieSeries();
-
-    series->append("Jane", 1);
-    series->append("Joe", 2);
-    series->append("Andy", 3);
-    series->append("Barbara", 4);
-    series->append("Axel", 5);
-    series->append("Axel2", 1);*/
+    ASSETS tmpassets;
+    // Sort QPieSeries by book or current value
+    if(piechartformat==piechartformat_bookval)
+        tmpassets = assets_sort_bookvalue(assets_org);
+    else
+        tmpassets = assets_sort_curvalue(assets_org);
 
     pieseries->clear();
     for(unsigned i=0;i<tmpassets.size();i++)
     {
-        pieseries->append(tmpassets[i].sedol,tmpassets[i].bookvalue);
+        if(piechartformat==piechartformat_bookval)
+            pieseries->append(tmpassets[i].sedol,tmpassets[i].bookvalue);
+        else
+            pieseries->append(tmpassets[i].sedol,tmpassets[i].curvalue);
     }
-
-    /*QPieSlice *slice = series->slices().at(1);
-    slice->setExploded();
-    slice->setLabelVisible();
-    slice->setPen(QPen(Qt::darkGreen, 2));
-    slice->setBrush(Qt::green);*/
-
-    /*QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Simple piechart example");
-    chart->legend()->hide();*/
-
-    // Should remove previous chart (memory leak)
-    //dprintf("previous chart: %p\n",ui->graphicsView_2->chart());
-    //delete ui->graphicsView_2->chart();
-    //ui->graphicsView_2->setChart(chart);
-    //ui->graphicsView_2->setRenderHint(QPainter::Antialiasing);
-}
-void MainWindow::on_pbLoad_clicked()
-{
-    // Select a folder which contains the asset data
-    QString directory = QFileDialog::getExistingDirectory(this, tr("Open asset folder"), "",QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-
-    // Return if nothing selected
-    if(directory.isNull())
-        return;
-
-    assets_org = assets_load_dir(directory);
-    assets = assets_org;
-
-    ui->statusBar->showMessage(QString("Loaded %1 assets").arg(assets_org.size()),2000);
-
-    //assets_print(assets);
-    assets_print_basic(assets);
-    fillAssetsTable();
-    fillPieChart();
-
-    reinitui();
 }
 
 
@@ -257,7 +232,7 @@ QList<int> MainWindow::getSelectedAssets()
     // Get all the selection ranges and put each row in a list
     QList<QTableWidgetSelectionRange> sr = ui->twAssets->selectedRanges();
     QList<int> rows;
-    QList<QString> ports;
+    //QList<QString> ports;
     foreach(auto i,sr)
     {
         //printf("selection range: %d %d - %d %d\n",i.leftColumn(),i.topRow(),i.rightColumn(),i.bottomRow());
@@ -279,12 +254,12 @@ QList<int> MainWindow::getSelectedAssets()
 
 void MainWindow::on_pbDeselect_clicked()
 {
-    ui->twAssets->clearSelection();
+    assets_print(assets);
 }
 
 void MainWindow::on_twAssets_itemSelectionChanged()
 {
-    dprintf("Selection changed\n");
+    //dprintf("Selection changed\n");
     QList<int> rows = getSelectedAssets();
     /*if(rows.size()==0)
         return;*/
@@ -292,9 +267,17 @@ void MainWindow::on_twAssets_itemSelectionChanged()
 
     selectedAssets = rows;
 
-    plotasset(rows);
+    updateassetspresentation();         // Recomputs sum based on selected
+    plotassetchart(rows);
 
 
+    updatepieselection(rows);
+
+
+
+}
+void MainWindow::updatepieselection(QList<int> rows)
+{
     // Must: unexplode all
     for(int i=0;i<pieseries->slices().size();i++)
     {
@@ -302,7 +285,11 @@ void MainWindow::on_twAssets_itemSelectionChanged()
         pieseries->slices().at(i)->setLabelVisible(false);
     }
 
-    ASSETS tmpassets = assets_sort_value(assets_org);
+    ASSETS tmpassets;
+    if(piechartformat==piechartformat_bookval)
+        tmpassets = assets_sort_bookvalue(assets_org);
+    else
+        tmpassets = assets_sort_curvalue(assets_org);
     if(rows.size())
     {
         // Quick hack: need better data structure. Pie chart is sorted by value; asset can be sorted by value, sedol or name.
@@ -323,8 +310,6 @@ void MainWindow::on_twAssets_itemSelectionChanged()
             }
         }
     }
-
-
 }
 
 
@@ -336,31 +321,11 @@ void MainWindow::on_pbPlot_clicked()
 void MainWindow::plotselectedasset()
 {
     QList<int> ids = getSelectedAssets();
-    plotasset(ids);
+    plotassetchart(ids);
 }
-void MainWindow::plotasset(int id)
+void MainWindow::plotassetchart(QList<int> ids)
 {
-    if(assets.size()==0)
-        return;
-
-    QLineSeries *series0 = new QLineSeries();
-    for(unsigned i=0;i<assets[id].data.size();i++)
-    {
-        series0->append(assets[id].data[i].date,assets[id].data[i].v);
-    }
-
-
-    QChart *chart = new QChart();
-    chart->addSeries(series0);
-    chart->createDefaultAxes();
-    chart->axisY()->setRange(-3, 13);
-    ui->graphicsView->setChart(chart);
-
-
-}
-void MainWindow::plotasset(QList<int> ids)
-{
-    dprintf("plotasset qlist. ids: %d\n",ids.size());
+    //dprintf("plotasset qlist. ids: %d\n",ids.size());
     //return;
     //if(assets.size()==0)
         //return;
@@ -384,52 +349,46 @@ void MainWindow::plotasset(QList<int> ids)
 
     double vmin=DBL_MAX,vmax=DBL_MIN;
 
-    // Plot individual lines if plot AV or AV*units
-    if(ui->rbPlotAV->isChecked() || ui->rbPlotAVxUnits->isChecked())
+    // Plot individual lines
+    if(chartformat==chartformat_sumvalue || chartformat==chartformat_sumvaluepercent || chartformat==chartformat_sumvaluedelta)
     {
-        for(int id = 0;id<ids.size();id++)
-        {
-            QLineSeries *series0 = new QLineSeries();
-            for(unsigned i=0;i<assets[ids[id]].data.size();i++)
-            {
-                // Convert time in milliseconds
-                double v;
-                if(ui->rbPlotAV->isChecked())
-                    v = assets[ids[id]].data[i].v;                          // NAV
-                if(ui->rbPlotAVxUnits->isChecked())
-                    v = assets[ids[id]].data[i].v*assets[ids[id]].units;    // Value at date
-                series0->append(1000.0*assets[ids[id]].data[i].date,v);
-                vmin=std::min(vmin,v);
-                vmax=std::max(vmax,v);
-            }
+        // Select the sum asset
+        ids.clear();
+        ids.push_back(assets.size()-1);
+    }
 
-            // Connect series clicked to onSeriesClickedID via a lamba to pass the id of the series.
-            // Connect with new syntax
-            //connect(series0,&QLineSeries::clicked,this,&MainWindow::on_seriesClicked);
+    for(int id = 0;id<ids.size();id++)
+    {
+        QLineSeries *series0 = new QLineSeries();
+        for(unsigned i=0;i<assets[ids[id]].data.size();i++)
+        {
+            // Convert time in milliseconds
+            double v;
+            v = assets[ids[id]].data[i].v;
+            series0->append(1000.0*assets[ids[id]].data[i].date,v);
+            vmin=std::min(vmin,v);
+            vmax=std::max(vmax,v);
+        }
+
+        // Connect click and hover, but only for non-sum chart
+        if(!(chartformat==chartformat_sumvalue || chartformat==chartformat_sumvaluepercent || chartformat==chartformat_sumvaluedelta))
+        {
+            // Connect series clicked to onSeriesClickedID via a lamba to pass the id of the series
             connect(series0,&QLineSeries::clicked,this,[id,this](const QPointF &p){this->on_seriesClickedID(id,p);});
             connect(series0,&QLineSeries::hovered,this,[id,this](const QPointF &p,bool s){this->on_seriesHovered(id,p,s);});
-
-            // Size of line
-            /*QPen p = series0->pen();
-            p.setWidth(p.width()+5);
-            series0->setPen(p);*/
-
-
-
-            chart->addSeries(series0);
-            QString nt=assets[ids[id]].name;
-            nt.truncate(30);
-            series0->setName(assets[ids[id]].sedol+"<BR>"+nt);
-            series0->attachAxis(axisX);
-            series0->attachAxis(axisY);
-
-
         }
-    }
-    if(ui->rbPlotTotal->isChecked())
-    {
+
+        chart->addSeries(series0);
+        QString nt=assets[ids[id]].name;
+        nt.truncate(30);
+        series0->setName(assets[ids[id]].sedol+"<BR>"+nt);
+        series0->attachAxis(axisX);
+        series0->attachAxis(axisY);
+
 
     }
+
+
     //dprintf("min-max: %lf %lf\n",vmin,vmax);
 
     // Adjust the margins
@@ -466,63 +425,128 @@ void MainWindow::plotasset(QList<int> ids)
 
 }
 
+void MainWindow::on_rbDateRange7d_clicked()
+{
+    chartxrange=chartxrange_7d;
+    updateassetspresentation();
+}
 void MainWindow::on_rbDateRange1m_clicked()
 {
-    chartxrange=1;
-    updateassetsrange();
+    chartxrange=chartxrange_1m;
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbDateRange3m_clicked()
 {
-    chartxrange=3;
-    updateassetsrange();
+    chartxrange=chartxrange_3m;
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbDateRange6m_clicked()
 {
-    chartxrange=6;
-    updateassetsrange();
+    chartxrange=chartxrange_6m;
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbDateRange12m_clicked()
 {
-    chartxrange=12;
-    updateassetsrange();
+    chartxrange=chartxrange_1y;
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbDateRange3y_clicked()
 {
-    chartxrange=3*12;
-    updateassetsrange();
+    chartxrange=chartxrange_3y;
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbDateRange5y_clicked()
 {
-    chartxrange=5*12;
-    updateassetsrange();
+    chartxrange=chartxrange_5y;
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbDateRangeAll_clicked()
 {
-    chartxrange=0;
-    updateassetsrange();
+    chartxrange=chartxrange_all;
+    updateassetspresentation();
 }
 
 void MainWindow::reinitui()
 {
-    ui->rbDateRangeAll->setChecked(true);
+    // Makes the UI radios match the model state
+    switch(chartxrange)
+    {
+        case chartxrange_1m:
+            ui->rbDateRange1m->setChecked(true);
+            break;
+        case chartxrange_3m:
+            ui->rbDateRange3m->setChecked(true);
+            break;
+        case chartxrange_6m:
+            ui->rbDateRange6m->setChecked(true);
+            break;
+        case chartxrange_1y:
+            ui->rbDateRange12m->setChecked(true);
+            break;
+        case chartxrange_3y:
+            ui->rbDateRange3y->setChecked(true);
+            break;
+        case chartxrange_5y:
+            ui->rbDateRange5y->setChecked(true);
+            break;
+        case chartxrange_7d:
+            ui->rbDateRange7d->setChecked(true);
+            break;
+        case chartxrange_all:
+        default:
+            ui->rbDateRangeAll->setChecked(true);
+            break;
+    }
+    /*switch(chartsort)
+    {
+        case chartsort_sedol:
+            ui->rb
+            break;
+        case chartsort_gain:
+        case chartsort_name:
+        case chartsort_curval:
+        case chartsort_bookval:
+    }*/
+    switch(chartformat)
+    {
+        case chartformat_value:
+            ui->rbPlotV->setChecked(true);
+            break;
+        case chartformat_sumvalue:
+            ui->rbPlotSV->setChecked(true);
+            break;
+        case chartformat_unitprice:
+            ui->rbPlotUP->setChecked(true);
+            break;
+        case chartformat_valuepercent:
+            ui->rbPlotVP->setChecked(true);
+            break;
+        case chartformat_sumvaluepercent:
+            ui->rbPlotSVP->setChecked(true);
+            break;
+        case chartformat_unitpricepercent:
+        default:
+            ui->rbPlotUPP->setChecked(true);
+            break;
+    }
 }
 
 void MainWindow::on_rbYAbsolute_clicked()
 {
     chartyrangepercent = false;
-    updateassetsrange();
+    updateassetspresentation();
 }
 
 void MainWindow::on_rbYPercentage_clicked()
 {
     chartyrangepercent = true;
-    updateassetsrange();
+    updateassetspresentation();
 }
 
 void MainWindow::on_chartMouseMoveSignal(qreal x, qreal y)
@@ -587,61 +611,157 @@ void MainWindow::on_rbPlotAVxUnits_clicked()
 void MainWindow::on_rbPlotUP_clicked()
 {
     chartformat = chartformat_unitprice;
-    updateassetsrange();
+    updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbPlotUPP_clicked()
 {
     chartformat = chartformat_unitpricepercent;
-    updateassetsrange();
+    updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbPlotV_clicked()
 {
     chartformat = chartformat_value;
-    updateassetsrange();
+    updateassetspresentation();
+    plotselectedasset();
+}
+void MainWindow::on_rbPlotVD_clicked()
+{
+    chartformat = chartformat_valuedelta;
+    updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbPlotVP_clicked()
 {
     chartformat = chartformat_valuepercent;
-    updateassetsrange();
+    updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbPlotSV_clicked()
 {
     chartformat = chartformat_sumvalue;
+    updateassetspresentation();
+    plotselectedasset();
 }
-void MainWindow::updateassetsrange()
+void MainWindow::on_rbPlotSVP_clicked()
 {
-    if(chartxrange)
+    chartformat = chartformat_sumvaluepercent;
+    updateassetspresentation();
+    plotselectedasset();
+}
+void MainWindow::on_rbPlotSVD_clicked()
+{
+    chartformat = chartformat_sumvaluedelta;
+    updateassetspresentation();
+    plotselectedasset();
+}
+
+
+
+void MainWindow::updateassetspresentation()
+{
+    // Perform sorting order
+    switch(chartsort)                                               // Sort
     {
-        QDateTime fromdate = QDateTime::currentDateTime();
-        fromdate = fromdate.addMonths(-chartxrange);
-        unsigned unixtime = fromdate.toSecsSinceEpoch();
-        assets = assets_after(assets_org,unixtime);
+        case chartsort_sedol:
+            assets = assets_sort_sedol(assets_org);
+            break;
+        case chartsort_name:
+            assets = assets_sort_name(assets_org);
+            break;
+        case chartsort_gain:
+            assets = assets_sort_gain(assets_org);
+            break;
+        case chartsort_curval:
+            assets = assets_sort_curvalue(assets_org);
+            break;
+        case chartsort_bookval:
+            assets = assets_sort_bookvalue(assets_org);
+            break;
+        default:
+            dprintf("Unknown sort order\n");
     }
-    else
-        assets = assets_org;
-    /*if(chartyrangepercent)
+
+    // Perform time limit
+    switch(chartxrange)
     {
-        // Convert from absolute to percent
-        for(unsigned i=0;i<assets.size();i++)
+        case chartxrange_7d:
         {
-            if(assets[i].data.size()!=0 && assets[i].data[0].v!=0)
-            {
-                double ref = assets[i].data[0].v;
-                for(unsigned j=0;j<assets[i].data.size();j++)
-                {
-                    assets[i].data[j].v = (assets[i].data[j].v/ref-1.0)*100;
-                }
-            }
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addDays(-7);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
         }
-    }*/
+        break;
+        case chartxrange_1m:
+        {
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addMonths(-1);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
+        }
+        break;
+        case chartxrange_3m:
+        {
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addMonths(-3);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
+        }
+        break;
+        case chartxrange_6m:
+        {
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addMonths(-6);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
+        }
+        break;
+        case chartxrange_1y:
+        {
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addMonths(-12);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
+        }
+        break;
+        case chartxrange_3y:
+        {
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addMonths(-12*3);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
+        }
+        break;
+        case chartxrange_5y:
+        {
+            QDateTime fromdate = QDateTime::currentDateTime();
+            fromdate = fromdate.addMonths(-12*5);
+            qint64 unixtime = fromdate.toSecsSinceEpoch();
+            assets = assets_after(assets,unixtime);
+        }
+        break;
+    }
+
+    // Add sum asset
+    ASSET as = generatesumtimeseries(assets,selectedAssets);
+    assets.push_back(as);
+    // Print
+    //asset_print(as);
+
+
+
+
+
     switch(chartformat)
     {
         case chartformat_unitprice:
-            // By defauilt assets.data[].v is unit price
+            // By default assets.data[].v is unit price
             break;
         case chartformat_unitpricepercent:
         {
@@ -687,22 +807,96 @@ void MainWindow::updateassetsrange()
 
         }
         break;
-        case chartformat_sumvalue:
-            // TBI
-            /*
-             * Either: convert to value, and leave the sum to be computed depending on the selected assets
-             * Or: create a new vector with the sum of selected assets here
-             * Must also: sumvalue percent compared to sum of bookcosts
-             * Data series must be interpolated so that addition is successful? or create new series with daily points and pick
-             * nearest from asset series.
-            */
+        case chartformat_valuedelta:
+        {
+            // Convert to value % change, i.e. change in value (unit * unitprice) compared to book cost
+            for(unsigned i=0;i<assets.size();i++)
+            {
+                double ref = assets[i].bookvalue;
+                for(unsigned j=0;j<assets[i].data.size();j++)
+                {
+                    assets[i].data[j].v = assets[i].data[j].v*assets[i].units-assets[i].bookvalue;
+                }
+            }
 
+        }
+        break;
+        case chartformat_sumvalue:
+            // Nothing to do for sum
             break;
-        //case chartformat_sumvaluepercent:
-            // TBI
-            //break;
+        case chartformat_sumvaluepercent:           // This is same as valuepercent, only for last asset
+        {
+            // Convert to value % change, i.e. change in value (unit * unitprice) compared to book cost
+            double ref = assets.back().bookvalue;
+
+            for(unsigned j=0;j<assets.back().data.size();j++)
+            {
+                assets.back().data[j].v = (assets.back().data[j].v/ref-1.0)*100;
+            }
+        }
+        break;
+        case chartformat_sumvaluedelta:
+        {
+            double ref = assets.back().bookvalue;
+            for(unsigned j=0;j<assets.back().data.size();j++)
+            {
+                assets.back().data[j].v = assets.back().data[j].v-ref;
+            }
+        }
+        break;
         default:
             break;
     }
-    plotselectedasset();
+    //assets_print_basic(assets);
+}
+
+
+
+
+
+void MainWindow::on_rbPieBook_clicked()
+{
+    piechartformat=piechartformat_bookval;
+    fillPieChart();
+    updatepieselection(getSelectedAssets());
+}
+
+void MainWindow::on_rbPieCurrent_clicked()
+{
+    piechartformat=piechartformat_curval;
+    fillPieChart();
+    updatepieselection(getSelectedAssets());
+}
+
+void MainWindow::on_action_Load_triggered()
+{
+    // Select a folder which contains the asset data
+    QString directory = QFileDialog::getExistingDirectory(this, tr("Open asset folder"), "",QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+    // Return if nothing selected
+    if(directory.isNull())
+        return;
+
+    assets_org = assets_load_dir(directory);
+
+    assets_print_basic(assets_org);
+
+    ui->statusBar->showMessage(QString("Loaded %1 assets").arg(assets_org.size()),2000);
+
+
+    updateassetspresentation();
+
+
+
+
+    chartxrange=chartxrange_all;
+    chartyrangepercent=false;
+    chartsort=chartsort_sedol;
+    chartformat=chartformat_unitprice;
+    reinitui();
+
+
+
+    fillAssetsTable();
+    fillPieChart();
 }

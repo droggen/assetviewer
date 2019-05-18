@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>868</width>
-    <height>342</height>
+    <height>347</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,7 +34,7 @@
       <item>
        <widget class="QPushButton" name="pbDeselect">
         <property name="text">
-         <string>Deselect all</string>
+         <string>Stuff</string>
         </property>
        </widget>
       </item>
@@ -77,6 +77,33 @@
       <item>
        <widget class="QChartView" name="graphicsView_2"/>
       </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="rightMargin">
+         <number>10</number>
+        </property>
+        <property name="bottomMargin">
+         <number>10</number>
+        </property>
+        <item>
+         <widget class="QRadioButton" name="rbPieBook">
+          <property name="text">
+           <string>Book value</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="rbPieCurrent">
+          <property name="text">
+           <string>Current value</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </item>
     <item>
@@ -92,9 +119,9 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
-           <widget class="QRadioButton" name="rbDateRange6m">
+           <widget class="QRadioButton" name="rbDateRange7d">
             <property name="text">
-             <string>6M</string>
+             <string>7D</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">buttonGroup</string>
@@ -124,14 +151,24 @@
             </attribute>
            </widget>
           </item>
+          <item>
+           <widget class="QRadioButton" name="rbDateRange6m">
+            <property name="text">
+             <string>6M</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">buttonGroup</string>
+            </attribute>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_6">
           <item>
-           <widget class="QRadioButton" name="rbDateRange5y">
+           <widget class="QRadioButton" name="rbDateRange12m">
             <property name="text">
-             <string>5Y</string>
+             <string>1Y</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">buttonGroup</string>
@@ -149,9 +186,9 @@
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="rbDateRange12m">
+           <widget class="QRadioButton" name="rbDateRange5y">
             <property name="text">
-             <string>1Y</string>
+             <string>5Y</string>
             </property>
             <attribute name="buttonGroup">
              <string notr="true">buttonGroup</string>
@@ -169,91 +206,6 @@
            </widget>
           </item>
          </layout>
-        </item>
-        <item>
-         <widget class="Line" name="line_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_7">
-          <item>
-           <widget class="QRadioButton" name="rbYAbsolute">
-            <property name="text">
-             <string>Absolute</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_2</string>
-            </attribute>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="rbYPercentage">
-            <property name="text">
-             <string>Percentage</string>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_2</string>
-            </attribute>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="Line" name="line_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_8">
-          <item>
-           <widget class="QRadioButton" name="rbPlotAV">
-            <property name="text">
-             <string>AV</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_3</string>
-            </attribute>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="rbPlotAVxUnits">
-            <property name="text">
-             <string>AV*Units</string>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_3</string>
-            </attribute>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="rbPlotTotal">
-            <property name="text">
-             <string>Total</string>
-            </property>
-            <attribute name="buttonGroup">
-             <string notr="true">buttonGroup_3</string>
-            </attribute>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="Line" name="line">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
         </item>
        </layout>
       </item>
@@ -295,6 +247,16 @@
        </widget>
       </item>
       <item>
+       <widget class="QRadioButton" name="rbPlotVD">
+        <property name="text">
+         <string>Value delta</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_4</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
        <widget class="QRadioButton" name="rbPlotVP">
         <property name="text">
          <string>Value % (v.s. book cost)</string>
@@ -315,10 +277,23 @@
        </widget>
       </item>
       <item>
+       <widget class="QRadioButton" name="rbPlotSVD">
+        <property name="text">
+         <string>Sum value delta</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_4</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
        <widget class="QRadioButton" name="rbPlotSVP">
         <property name="text">
          <string>Sum value % (v.s. book cost)</string>
         </property>
+        <attribute name="buttonGroup">
+         <string notr="true">buttonGroup_4</string>
+        </attribute>
        </widget>
       </item>
      </layout>
@@ -334,6 +309,13 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="action_Load"/>
+   </widget>
+   <addaction name="menu_File"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -344,6 +326,14 @@
    </attribute>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="action_Load">
+   <property name="text">
+    <string>&amp;Load</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -359,11 +349,26 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pbLoad</sender>
+   <signal>clicked()</signal>
+   <receiver>action_Load</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>113</x>
+     <y>54</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <buttongroups>
-  <buttongroup name="buttonGroup_3"/>
   <buttongroup name="buttonGroup"/>
-  <buttongroup name="buttonGroup_2"/>
   <buttongroup name="buttonGroup_4"/>
  </buttongroups>
 </ui>

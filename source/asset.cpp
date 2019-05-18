@@ -7,11 +7,13 @@
 #include "mainwindow.h"
 
 
+
+
 ASSETS assets_load_dir(QString directory)
 {
     // Identify all assets based on the .nam extension
 
-    dprintf("Directory: '%s'\n",directory.toStdString().c_str());
+    //dprintf("Directory: '%s'\n",directory.toStdString().c_str());
 
 
     //QDir dir(directory);
@@ -19,7 +21,7 @@ ASSETS assets_load_dir(QString directory)
     QDir dir("d:\\wearlab\\admin\\finance\\assetdata");
     //QDir dir("D:\\wearlab\\admin\\finance\\assettest");
 
-    dprintf("Num entries: %d\n",dir.count());
+    //dprintf("Num entries: %d\n",dir.count());
 
     QFileInfoList fileinfos = dir.entryInfoList(QStringList("*.nam"),QDir::NoFilter, QDir::NoSort);
 
@@ -110,7 +112,7 @@ ASSET asset_load(QFileInfo fi)
             dprintf("conv toint error\n");
             return asset;
         }*/
-        double val = splt.at(1).toDouble();        
+        double val = splt.at(1).toDouble();
         //dprintf("%u %lf\n",date,val);
 
         as.date = date;
@@ -166,22 +168,29 @@ void assets_print(ASSETS assets)
 {
     for(unsigned i=0;i<assets.size();i++)
     {
-        dprintf("Asset %d: %s\n",i,assets[i].sedol.toStdString().c_str());
-        dprintf("%s\n",assets[i].name.toStdString().c_str());
-        for(unsigned j=0;j<assets[i].data.size();j++)
-        {
-            dprintf("\t%u %lf\n",assets[i].data[j].date,assets[i].data[j].v);
-        }
+        asset_print(assets[i]);
+
     }
 
 }
+void asset_print(ASSET asset)
+{
+    dprintf("Asset %s:\n",asset.sedol.toStdString().c_str());
+    dprintf("%s\n",asset.name.toStdString().c_str());
+    for(unsigned j=0;j<asset.data.size();j++)
+    {
+        dprintf("\t%u %lf\n",asset.data[j].date,asset.data[j].v);
+    }
+}
+
 void assets_print_basic(ASSETS assets)
 {
     for(unsigned i=0;i<assets.size();i++)
     {
         dprintf("Asset %d: %s\n",i,assets[i].sedol.toStdString().c_str());
         dprintf("%s\n",assets[i].name.toStdString().c_str());
-        dprintf("Data points: %d from %u to %u\n",assets[i].data.size(),assets[i].data[0].date,assets[i].data[assets[i].data.size()-1].date);
+        if(assets[i].data.size())
+            dprintf("Data points: %d from %u to %u\n",assets[i].data.size(),assets[i].data[0].date,assets[i].data[assets[i].data.size()-1].date);
 
     }
 }
@@ -222,7 +231,7 @@ ASSETS assets_sort_sedol(ASSETS assets)
     }
     return newassets;
 }
-ASSETS assets_sort_value(ASSETS assets)
+ASSETS assets_sort_bookvalue(ASSETS assets)
 {
     ASSETS newassets;
 
@@ -285,7 +294,7 @@ ASSETS assets_sort_gain(ASSETS assets)
 /*
  * Return subset of data starting at date
 */
-ASSETS assets_after(ASSETS assets,unsigned date)
+ASSETS assets_after(ASSETS assets,qint64 date)
 {
 
 
@@ -324,4 +333,117 @@ int assets_find_id_by_sedol(ASSETS assets,QString sedol)
 double gain_rnd(double gain)
 {
     return round(gain*100000.0)/1000.0;
+}
+
+double asset_getvaluenearesttodate(ASSET asset,qint64 date)
+{
+    return rand();
+}
+
+unsigned assets_findyoungest(ASSETS assets)
+{
+    // Find oldsest timestamp in assets - always positive
+    unsigned lv=UINT_MAX;
+    for(unsigned i=0;i<assets.size();i++)
+    {
+        lv=std::min(lv,assets[i].data.front().date);
+    }
+    return lv;
+}
+unsigned assets_findoldest(ASSETS assets)
+{
+    unsigned lv=0;
+    for(unsigned i=0;i<assets.size();i++)
+    {
+        lv=std::max(lv,assets[i].data.back().date);
+    }
+    return lv;
+}
+
+double asset_getvalat(ASSET asset,unsigned at)
+{
+    // Find the asset value at time "at".
+    // Relies on assumption that data is sorted
+    // use a "zero hold", i.e. nearest data in past, except for the first sample which is nearest in future
+    int t_at = at;
+    if(asset.data.size()==0)
+        return 0.0;
+    for(unsigned i=1;i<asset.data.size();i++)
+    {
+        int t_data=asset.data[i].date;
+        if(t_data-t_at>=0)
+            return asset.data[i-1].v;
+    }
+    //dprintf("after for return value[0] %lf at %d\n",asset.data[0].v,asset.data[0].date);
+    // If at is later than all data, return most recent value
+    return asset.data.back().v;
+}
+
+ASSET generatesumtimeseries(ASSETS assets,QList<int> ids)
+{
+    /*
+     * Either: convert to value, and leave the sum to be computed depending on the selected assets
+     * Or: create a new vector with the sum of selected assets here
+     * Must also: sumvalue percent compared to sum of bookcosts
+     * Data series must be interpolated so that addition is successful? or create new series with daily points and pick
+     * nearest from asset series.
+    */
+
+    //dprintf("In generatesumtimeseries\n");
+
+    ASSET assetsum;
+
+    // Find oldest date and most recent date
+    unsigned ts_1 = assets_findoldest(assets);
+    unsigned ts_0 = assets_findyoungest(assets);
+    //dprintf("ts: %u %u\n",ts_0,ts_1);
+    int delta = ts_1-ts_0;
+    //dprintf("delta: %d\n",delta);
+    //dprintf("dur: %d days\n",(ts_1-ts_0)/3600/24);
+
+    assetsum.sedol="Sum";
+    assetsum.units=0;
+    assetsum.name="Sum value";
+    assetsum.data.clear();
+
+    // Generate sums only for selected assets
+    double curv=0,bookv=0;
+    for(int id = 0;id<ids.size();id++)
+    {
+        curv+=assets[ids[id]].curvalue;
+        bookv+=assets[ids[id]].bookvalue;
+    }
+    assetsum.curvalue=curv;
+    assetsum.bookvalue=bookv;
+    // Calculate the gain (loss)
+    assetsum.gain = (assetsum.curvalue-assetsum.bookvalue)/assetsum.bookvalue;
+
+    //dprintf("curvalue: %lf bookvalue: %lf gain: %lf\n",assetsum.curvalue,assetsum.bookvalue,assetsum.gain);
+
+    // Generate one data point per day - round to one day in past
+    unsigned tstart = ts_1-((ts_1-ts_0)/3600/24+1)*3600*24;
+
+    for(unsigned t=tstart;t<=ts_1;t+=3600*24)
+    {
+        ASSETSAMPLE as;
+        as.date=t;
+        // Must find nearest data point to t
+        //as.v=rand();
+        as.v = 0;
+        for(int id = 0;id<ids.size();id++)
+        {
+            double v = asset_getvalat(assets[ids[id]],t) * assets[ids[id]].units;
+
+            as.v += v;
+
+            //dprintf("at %u asset %s v %lf\n",t,assets[selectedAssets[id]].name.toStdString().c_str(), v);
+        }
+
+        //dprintf("at %u v %lf\n",t,as.v);
+
+        assetsum.data.push_back(as);
+    }
+    //asset_print(assetsum);
+    return assetsum;
+
 }
