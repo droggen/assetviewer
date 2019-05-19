@@ -133,7 +133,7 @@ ASSET asset_load(QFileInfo fi)
     QTextStream in3(&file3);
     QString value = in3.readLine();
     file3.close();
-    dprintf("val: %s\n",value.toStdString().c_str());
+    //dprintf("val: %s\n",value.toStdString().c_str());
 
     asset.bookvalue = value.toDouble();
 
@@ -148,7 +148,7 @@ ASSET asset_load(QFileInfo fi)
     QTextStream in4(&file4);
     value = in4.readLine();
     file4.close();
-    dprintf("units : %s\n",value.toStdString().c_str());
+    //dprintf("units : %s\n",value.toStdString().c_str());
 
     asset.units = value.toDouble();
 

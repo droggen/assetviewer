@@ -8,6 +8,8 @@
  * v Pie chart: by book value or current value
  * - Keyboard shortcut for load
  * - Keyboard shortcut for quit
+ * - Prettify axis range
+ * - Value at mouse location
  */
 
 
