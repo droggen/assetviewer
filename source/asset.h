@@ -46,5 +46,6 @@ unsigned assets_findoldest(ASSETS assets);
 unsigned assets_findyoungest(ASSETS assets);
 double asset_getvalat(ASSET asset,unsigned at);
 ASSET generatesumtimeseries(ASSETS assets,QList<int> ids);
+int assets_find_id_by_sedol(const ASSETS &assets,const QString &sedol);
 
 #endif // ASSET_H

@@ -34,6 +34,8 @@ private slots:
 
     void on_pbPlot_clicked();
 
+    void on_rbDateRange7d_clicked();
+
     void on_rbDateRange1m_clicked();
 
     void on_rbDateRange3m_clicked();
@@ -72,8 +74,6 @@ private slots:
 
     void on_rbPlotSV_clicked();
 
-    void on_rbDateRange7d_clicked();
-
     void on_rbPlotVD_clicked();
 
     void on_rbPlotSVP_clicked();
@@ -85,6 +85,9 @@ private slots:
     void on_rbPieCurrent_clicked();
 
     void on_action_Load_triggered();
+
+
+    void on_action_Quit_triggered();
 
 private:
     Ui::MainWindow *ui;

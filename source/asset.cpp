@@ -447,3 +447,15 @@ ASSET generatesumtimeseries(ASSETS assets,QList<int> ids)
     return assetsum;
 
 }
+
+int assets_find_id_by_sedol(const ASSETS &assets,const QString &sedol)
+{
+    for(unsigned i=0;i<assets.size();i++)
+    {
+        if(assets[i].sedol==sedol)
+        {
+            return i;
+        }
+    }
+    return -1;
+}

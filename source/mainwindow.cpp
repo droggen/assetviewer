@@ -102,6 +102,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->verticalLayout->addWidget(console);
 
 
+
+
 #ifdef DEVELMODE
     print("Starting up\n");
 #else
@@ -297,19 +299,14 @@ void MainWindow::updatepieselection(QList<int> rows)
         // Quick hack: need better data structure. Pie chart is sorted by value; asset can be sorted by value, sedol or name.
         for(int r=0;r<rows.size();r++)
         {
-            for(unsigned i=0;i<tmpassets.size();i++)
-            {
-                if(tmpassets[i].sedol==assets[rows[r]].sedol)
-                {
+            int i = assets_find_id_by_sedol(tmpassets,assets[rows[r]].sedol);
 
-                    QPieSlice *slice = pieseries->slices().at(i);
-                    slice->setExploded();
-                    slice->setLabelVisible();
-                    break;
-                    //slice->setPen(QPen(Qt::darkGreen, 2));
-                    //slice->setBrush(Qt::green);
-                }
-            }
+            QPieSlice *slice = pieseries->slices().at(i);
+            slice->setExploded();
+            slice->setLabelVisible();
+            //slice->setPen(QPen(Qt::darkGreen, 2));
+            //slice->setBrush(Qt::green);
+
         }
     }
 }
@@ -431,47 +428,55 @@ void MainWindow::on_rbDateRange7d_clicked()
 {
     chartxrange=chartxrange_7d;
     updateassetspresentation();
+    plotselectedasset();
 }
 void MainWindow::on_rbDateRange1m_clicked()
 {
     chartxrange=chartxrange_1m;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbDateRange3m_clicked()
 {
     chartxrange=chartxrange_3m;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbDateRange6m_clicked()
 {
     chartxrange=chartxrange_6m;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbDateRange12m_clicked()
 {
     chartxrange=chartxrange_1y;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbDateRange3y_clicked()
 {
     chartxrange=chartxrange_3y;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbDateRange5y_clicked()
 {
     chartxrange=chartxrange_5y;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::on_rbDateRangeAll_clicked()
 {
     chartxrange=chartxrange_all;
     updateassetspresentation();
+    plotselectedasset();
 }
 
 void MainWindow::reinitui()
@@ -901,4 +906,10 @@ void MainWindow::on_action_Load_triggered()
 
     fillAssetsTable();
     fillPieChart();
+}
+
+
+void MainWindow::on_action_Quit_triggered()
+{
+    close();
 }
