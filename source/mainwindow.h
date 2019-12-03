@@ -123,6 +123,8 @@ private:
     void updateassetspresentation();
     void updatepieselection(QList<int> rows);
 
+    void friendlyyscale(double y1,double y2,double &yf1,double &yf2);
+
 };
 
 int dprintf(const char *format, ...);

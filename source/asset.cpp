@@ -117,7 +117,10 @@ ASSET asset_load(QFileInfo fi)
 
         as.date = date;
         as.v = val;
-        asset.data.push_back(as);
+
+        // Sanity check: if val==0 means data error (e.g. couldn't query server for asset value) thus skip
+        if(as.v!=0)
+            asset.data.push_back(as);
 
     }
     file2.close();

@@ -397,12 +397,21 @@ void MainWindow::plotassetchart(QList<int> ids)
         vmax=1;
     }
     //dprintf("min-max after adj: %lf %lf\n",vmin,vmax);
+    /*
+    // Default version - not friendlified
     double vmean = (vmax+vmin)/2.0;
     double vrange = (vmax-vmin);
     vmin=vmean-vrange*1.1/2.0;
     vmax=vmean+vrange*1.1/2.0;
-
     axisY->setRange(vmin,vmax);
+    */
+
+    // Friendlify the y range
+    double vfmin,vfmax;
+    friendlyyscale(vmin,vmax,vfmin,vfmax);
+    dprintf("min-max before: %lf %lf after adjustment: %lf %lf\n",vmin,vmax,vfmin,vfmax);
+    axisY->setRange(vfmin,vfmax);
+
 
     //chart->legend()->hide();
     /*chart->createDefaultAxes();
@@ -913,3 +922,36 @@ void MainWindow::on_action_Quit_triggered()
 {
     close();
 }
+
+/*
+    Find a "human-friendly" scale rounding the scale on reasonable multiples.
+    Input:
+        y1: minimum y range
+        y2: maximum y range
+    Output:
+        yf1: minimum y range friendlified
+        yf2: maximum y range friendlified
+*/
+void MainWindow::friendlyyscale(double y1,double y2,double &yf1,double &yf2)
+{
+    double n = 5.0;       // 5: twos, two hundreds, two thousands
+
+    yf1=y1;
+    yf2=y2;
+
+    // Approach: find the highest power of 10 above (below) the current value, and divide by n to obtain
+    // the tick-spacing (ts).
+    // Then round up/down to the nearest tick spacing.
+
+    if(y1!=0)
+    {
+        double ts1 = pow(10.0,ceil(log10(fabs(y1))))/n;
+        yf1 = floor(y1/ts1)*ts1;
+    }
+    double ts2 = pow(10.0,ceil(log10(fabs(y2))))/n;
+    yf2 = ceil(y2/ts2)*ts2;
+}
+
+
+
+
