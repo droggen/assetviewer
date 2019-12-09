@@ -934,7 +934,8 @@ void MainWindow::on_action_Quit_triggered()
 */
 void MainWindow::friendlyyscale(double y1,double y2,double &yf1,double &yf2)
 {
-    double n = 5.0;       // 5: twos, two hundreds, two thousands
+    //double n = 5.0;       // 5: twos, two hundreds, two thousands
+    double n = 10.0;      // 10: ones, one hundreds, one thousands
 
     yf1=y1;
     yf2=y2;
